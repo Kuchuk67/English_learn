@@ -1,65 +1,114 @@
 from voice import voice
-from data.d1 import data_words
+from data.d1_1 import data_words_1_1   # сокращенный 1
+from data.d1 import data_words_1 # 103 слов
+from data.d2 import data_words_2 #  39 слов
+from data.d3 import data_words_3    # 143  слов
+from data.d4 import data_words_4    # 135  слов
+from data.d5 import data_words_5     # 123  слов
+from data.d6 import data_words_6   as data_words   # 34  слов
+
 import random
-from bottle import route, run, template, view, debug
+from bottle import route, run, template, request, view, debug
 
 words_d1 = data_words()
-keys_words_d1 = list(words_d1.keys())
-values_words_d1 = list(words_d1.values())
+keys_words = list(words_d1.keys())
+random.shuffle(keys_words)
+#values_words_d1 = list(words_d1.values())
 step = 1
+right_list = []
 
 @route('/')
 def index():
     """ Индексная страница - СТАРТ 
     выбираем словари для обучения
     """
-    return '<a href="/d1/world">Выбрать словарь d1</a>'
-
-@route('/hello')
-@route('/hello/<name>')
-@view('template')
-def hello(name='World'):
-    return dict(name=name)
+    
+    return f'<a href="/d1">Выбрать словарь d1</a><br><a href="/d2">Выбрать словарь d2</a>'
 
 
-@route('/d1/<id_word>')
 
-def word(id_word):
-    id_word = int(id_word)
 
-    word = keys_words_d1[id_word]
-    translate = values_words_d1[id_word]
+
+
+lib='d1'
+@route(f'/{lib}')
+@route(f'/{lib}/')
+@route(f'/{lib}/<id_word>')
+@view('template_word')
+def word(id_word=-1, lib=lib):
+
+    id_word=int(id_word)
+    if id_word < 0:
+        id_word = 0
+        right_list.clear()
+        random.shuffle(keys_words)
+
+    e = request.query.e or '0'
+    e = int(e)
+
+    r = request.query.r or ''
+    if r != '':
+        right_list.append(int(r))
+
+    while True:
+        if id_word in right_list:
+            id_word += 1
+            if id_word>=len(keys_words):
+                if len(right_list) >= len(keys_words):
+                    return '<a href="./">Закончили</a>'
+                else:
+                    id_word = 0
+                #return '<a href="./">Закончили</a>'
+            continue
+        else:
+            break
+    
+    # Если номер слова перевышает их количество 
+    # возвращаемся на первое
+    
+    if (id_word>=len(keys_words)):
+        id_word=0
+    
+    word = keys_words[id_word]
+    translate = words_d1[word] 
 
     voice(word)
     answer = []
     answer_is = []
-    answer.append([translate, id_word+1])
+    if (e==1):
+        answer.append([translate, F"{id_word+1}"])
+    else:
+        answer.append([translate, F"{id_word+1}?r={id_word}"])
     answer_is.append(id_word)
 
     for _ in range(0,4):
-        x = random.randint(0, len(values_words_d1))
+        x = random.randint(0, len(keys_words)-1)
         
         while True:
             if x in answer_is:
-                x = random.randint(0, len(values_words_d1))
+                x = random.randint(0, len(keys_words)-1)
             else:
                 break
-
-        answer.append([values_words_d1[x], id_word])
+        answer.append([words_d1[keys_words[x]], F"{id_word}?e=1"])
         answer_is.append(x)
-
-
     random.shuffle(answer)
-    print(answer)
-    #table_answer = f'<a href="/">{}</a>'
 
-    return template('<h1>{{word}}</h1><br /> '
-    '<a href="{{translate[0][1]}}" style="text-decoration: none; color: #444;">{{translate[0][0]}}</a><br />' \
-    '<a href="{{translate[1][1]}}" style="text-decoration: none; color: #444;">{{translate[1][0]}}</a><br /> ' \
-    '<a href="{{translate[2][1]}}" style="text-decoration: none; color: #444;">{{translate[2][0]}}</a><br /> ' \
-    '<a href="{{translate[3][1]}}" style="text-decoration: none; color: #444;">{{translate[3][0]}}</a><br /> ' \
-    '<a href="{{translate[4][1]}}" style="text-decoration: none; color: #444;">{{translate[4][0]}}</a><br /> ' \
-    , word=word, translate=answer)
+    return dict(translate=word,
+                translate_0_link=F"../{lib}/{answer[0][1]}",
+                translate_1_link=F"../{lib}/{answer[1][1]}",
+                translate_2_link=F"../{lib}/{answer[2][1]}",
+                translate_3_link=F"../{lib}/{answer[3][1]}",
+                translate_4_link=F"../{lib}/{answer[4][1]}",
+                translate_0=answer[0][0],
+                translate_1=answer[1][0],
+                translate_2=answer[2][0],
+                translate_3=answer[3][0],
+                translate_4=answer[4][0],
+                translate_lib=lib,
+                translate_len=f"{len(right_list)}/{len(keys_words)}"
+    )
+
+
 
 
 
